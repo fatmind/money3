@@ -6,22 +6,21 @@ import numpy as np
 import pandas as pd
 from pypfopt import black_litterman, risk_models, EfficientFrontier
 from src.llm import LLMClient
-from src.data import DataClient
+from src.data.TingoData import TingoData
 
 
 class Optimizer:
     """Black-Litterman 优化器（基于 PyPortfolioOpt）。"""
 
-    def __init__(self, llm_client: LLMClient, data_client: DataClient) -> None:
+    def __init__(self, llm_client: LLMClient, data_client: TingoData) -> None:
         self.llm_client = llm_client
         self.data_client = data_client
 
-    def optimize(self, llm_input_text: str) -> Dict[str, Any]:
-        # 1) 获取观点（LLM 或 mock）
-        views_obj = self.llm_client.generate_views(llm_input_text)
-
-        # 2) 获取最近 1 年价格，估计协方差与先验
-        prices_recent = self.data_client.fetch_recent_market_and_macro().prices_1y
+    def optimize(self, views_obj: Dict[str, Any]) -> Dict[str, Any]:
+        # 1) 获取最近 1 年价格，估计协方差与先验
+        market_data = self.data_client.fetch_market_data()
+        prices_recent = market_data.prices
+        
         returns = prices_recent.pct_change().dropna()
         cov = risk_models.CovarianceShrinkage(returns).ledoit_wolf()
 
@@ -29,10 +28,10 @@ class Optimizer:
         delta = black_litterman.market_implied_risk_aversion(returns)
         prior = black_litterman.market_implied_prior_returns(market_caps, delta, cov)
 
-        # 3) 将 LLM views 映射为 P、Q、Omega
+        # 2) 将 LLM views 映射为 P、Q、Omega
         P, Q, omega = self._map_views(views_obj, prices_recent.columns, tau=0.05)
 
-        # 4) 后验期望收益
+        # 3) 后验期望收益
         bl_returns = black_litterman.black_litterman_return(
             cov_matrix=cov,
             market_prior=prior,
@@ -42,16 +41,17 @@ class Optimizer:
             tau=0.05,
         )
 
-        # 5) 约束优化（权重非负，和为 1；股票上限 0.7，债券/黄金下限 0.3 总和）
+        # 4) 约束优化
         ef = EfficientFrontier(bl_returns, cov)
         ef.add_constraint(lambda w: w >= 0)
         ef.add_constraint(lambda w: np.sum(w) == 1)
-        # 股票 70% 上限（假设 SPY 是股票）
+        
         ticker_list = list(prices_recent.columns)
         if "SPY" in ticker_list:
             spy_idx = ticker_list.index("SPY")
             ef.add_constraint(lambda w, i=spy_idx: w[i] <= 0.7)
-        # 债券+黄金 不低于 0.3（GLD+TLT）
+        
+        # 债券+黄金 不低于 0.3
         for lower, name in [(0.0, "GLD"), (0.0, "TLT")]:
             if name in ticker_list:
                 idx = ticker_list.index(name)
@@ -105,7 +105,6 @@ class Optimizer:
                 confs.append(conf)
 
         if not P_rows:
-            # 没有观点时，返回单位矩阵极小噪声，避免崩溃
             P = pd.DataFrame(np.zeros((1, n)), columns=tickers)
             Q = pd.Series([0.0])
             omega = pd.DataFrame(np.eye(1) * 1e-6)
@@ -114,7 +113,6 @@ class Optimizer:
         P = pd.DataFrame(P_rows, columns=tickers)
         Q = pd.Series(Q_vals)
 
-        # 置信度 -> 方差（置信度越高，方差越小）
         confs_arr = np.array(confs, dtype=float)
         eps = 1e-6
         var_scale = (1.0 - confs_arr + eps)

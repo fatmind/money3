@@ -1,40 +1,73 @@
 from src import __version__
-from src.data import DataClient
+from src.data.TingoData import TingoData, MarketData
 from src.llm import LLMClient
 from src.opt import Optimizer
 from src.backtest.backtester import Backtester
 
+import json
+
+
+def _build_llm_prompt(market_data: MarketData) -> str:
+    """构造一个丰富的 LLM 输入。"""
+    
+    prices_weekly = market_data.prices.resample('W').last().tail(30).to_json(orient='split')
+    macro_weekly = market_data.macro.resample('W').last().tail(30).to_json(orient='split')
+    news_summary = market_data.news.head(10)[['publishedDate', 'title', 'tags']].to_json(orient='records')
+
+    prompt = f"""
+    You are an investment advisor. Generate investment views for a Black-Litterman model based on the following market data.
+    
+    **Objective:** Target 15% annual return, max 10% drawdown, monthly rebalancing.
+    **Tickers:** {list(market_data.prices.columns)}
+    **Recent Prices (Weekly):** {prices_weekly}
+    **Recent Macro Indicators (Weekly, CPI/FEDFUNDS/DXY/VIX):** {macro_weekly}
+    **Recent News:** {news_summary}
+
+    **Required Output (JSON only):**
+    {{
+      "horizon": "1m",
+      "views": [
+        {{ "type": "absolute", "asset": "SPY", "expected_return": 0.18, "confidence": 0.7 }},
+        {{ "type": "relative", "assets": ["SPY", "TLT"], "outperformance": 0.05, "confidence": 0.6 }}
+      ],
+      "rationale": "Your reasoning here."
+    }}
+    """
+    return prompt
 
 def main() -> None:
-    
-    # 读取 .env（若存在）
-    from dotenv import load_dotenv  # type: ignore
+    from dotenv import load_dotenv
     load_dotenv()
+
+    data_client = TingoData(["SPY", "GLD", "TLT"])
+    market_data = data_client.fetch_market_data()
     
-    # 链式依赖：data -> llm -> opt
-    data = DataClient(["SPY", "GLD", "TLT"])  # 数据：1年行情+宏观；回测价
-    llm = LLMClient()  # LLM：DeepSeek（无配置时固定 mock）
-    opt = Optimizer(llm, data)  # 优化：Black-Litterman
+    llm_prompt = _build_llm_prompt(market_data)
+    
+    print("="*20 + " LLM Prompt Preview " + "="*20)
+    print(llm_prompt[:500] + "\n...")
+    print("="*58)
 
-    # 构造给 LLM 的纯文本上下文（简要提示，后续可替换为更丰富内容）
-    llm_text = (
-        "目标：年化15%、最大回撤10%、月度调仓。请输出 JSON views，包含绝对与相对观点。"
-    )
+    llm = LLMClient()
+    views = llm.generate_views(llm_prompt)
 
-    result = opt.optimize(llm_text)
+    # 注意：Optimizer 依赖于 DataClient 的接口，这里我们传入 TingoData 实例
+    # 如果 Optimizer 内部有强依赖 OpenBB 的逻辑，需要进一步修改
+    opt = Optimizer(llm, data_client) 
+    result = opt.optimize(views)
 
-    # 回测：2015-2025，月度近似再平衡，费率0.1%
-    prices_bt = data.fetch_backtest_prices("2015-01-01", "2025-12-31")
+    prices_bt = data_client.fetch_backtest_prices()
     backtester = Backtester(fee_rate=0.001)
     report = backtester.run(prices_bt, {k: float(v) for k, v in result.get("weights", {}).items()})
 
-    print(f"money3 {__version__}")
+    print(f"\n--- money3 v{__version__} ---")
     print("Optimized Weights:", result.get("weights"))
-    print("Views Used:", result.get("views_used"))
-    print("CAGR:", round(report.cagr, 4))
-    print("Max Drawdown:", round(report.max_drawdown, 4))
-    print("Sharpe:", round(report.sharpe, 4))
-    print("Volatility:", round(report.volatility, 4))
+    print("Views Used:", json.dumps(result.get("views_used"), indent=2))
+    print("\n--- Backtest Report ---")
+    print(f"CAGR: {report.cagr:.4f}")
+    print(f"Max Drawdown: {report.max_drawdown:.4f}")
+    print(f"Sharpe Ratio: {report.sharpe:.4f}")
+    print(f"Volatility: {report.volatility:.4f}")
 
 
 if __name__ == "__main__":
