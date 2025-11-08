@@ -165,3 +165,11 @@ if __name__ == "__main__":
     macro_data = fetch_macro_from_fred(macro_series_to_fetch, test_start, test_end)
     print("\n--- Macro DataFrame ---")
     print(macro_data.to_string())
+
+
+# 声明对外函数，使得其他模块可以导入这些函数
+__all__ = [
+    "fetch_prices_from_tiingo",
+    "fetch_news_from_finnhub",
+    "fetch_macro_from_fred",
+]
