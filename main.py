@@ -88,7 +88,7 @@ def build_llm_prompt(prices: pd.DataFrame, news: pd.DataFrame, macro: pd.DataFra
 - Use the raw tables above as-is; do not assume missing entries.
 - Translate qualitative conviction into quantitative expected returns and relative views that Black-Litterman can ingest.
 - Use confidence ∈ [0,1]; values near 1 imply very high conviction.
-- Keep rationale concise (≤ 120 words) and reference which table rows drive each view.
+- Keep rationale concise and reference which context drives each view.
 
 # Expected JSON Output
 Return JSON only, no commentary. Use this schema exactly:
@@ -127,7 +127,7 @@ def main() -> None:
     load_dotenv()
 
     # 开始结束时间
-    end_time_str = "2025-09-30"  # 视图生成时点之前最后一个交易日
+    end_time_str = "2025-10-30"  # 视图生成时点之前最后一个交易日
     start_time_str = (datetime.strptime(end_time_str, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
 
     backtest_end_str = "2025-10-31"  # 回测截止日期
@@ -182,24 +182,24 @@ def main() -> None:
     print(f"  Views incorporated: {len(bl_result.Q)}")
 
     # 5. 回测 & 可视化
-    prices_backtest = fetch_prices_from_tiingo(tickers, backtest_start_str, backtest_end_str)
-    if prices_backtest.empty:
-        raise ValueError("回测区间价格数据为空，请检查时间范围")
-    print(f"Prices (backtest horizon): {prices_backtest.shape}")
-    print("\n--- 4. Backtest & Visualization ---")
-    backtester = Backtester()
-    report: BacktestReport = backtester.run(prices_backtest, bl_result.weights)
+    # prices_backtest = fetch_prices_from_tiingo(tickers, backtest_start_str, backtest_end_str)
+    # if prices_backtest.empty:
+    #     raise ValueError("回测区间价格数据为空，请检查时间范围")
+    # print(f"Prices (backtest horizon): {prices_backtest.shape}")
+    # print("\n--- 4. Backtest & Visualization ---")
+    # backtester = Backtester()
+    # report: BacktestReport = backtester.run(prices_backtest, bl_result.weights)
 
-    print("Backtest metrics:")
-    print(f"  CAGR: {report.cagr:.2%}")
-    print(f"  Max Drawdown: {report.max_drawdown:.2%}")
-    print(f"  Sharpe: {report.sharpe:.2f}")
-    print(f"  Volatility: {report.volatility:.2%}")
+    # print("Backtest metrics:")
+    # print(f"  CAGR: {report.cagr:.2%}")
+    # print(f"  Max Drawdown: {report.max_drawdown:.2%}")
+    # print(f"  Sharpe: {report.sharpe:.2f}")
+    # print(f"  Volatility: {report.volatility:.2%}")
 
-    print("====== Displaying charts ======")
-    render_equity_curve(report.equity_curve)
-    render_drawdown(report.equity_curve)
-    render_weights(report.weights_used)
+    # print("====== Displaying charts ======")
+    # render_equity_curve(report.equity_curve)
+    # render_drawdown(report.equity_curve)
+    # render_weights(report.weights_used)
 
 
 if __name__ == "__main__":
