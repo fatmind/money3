@@ -5,9 +5,9 @@
 ## 功能特性
 
 - **数据获取**: 从 Tiingo、Finnhub、FRED 获取历史价格、新闻和宏观数据
-- **AI 观点生成**: 使用 OpenAI GPT-4 分析市场数据并生成投资观点
+- **AI 观点生成**: 使用 DeepSeek LLM（通过 OpenAI 兼容 API）分析市场数据并生成投资观点
 - **Black-Litterman 优化**: 结合市场均衡和主观观点进行组合优化
-- **回测验证**: 评估投资组合表现，包括收益曲线、回撤、夏普比率等
+- **回测验证**: 使用简化的回测引擎（基于 Pandas/Numpy）评估投资组合表现
 - **Web 界面**: 前后端分离架构，Flask API + 纯前端页面
 
 ## 环境初始化
@@ -38,8 +38,6 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-这一步会将 `money3` 包安装为可编辑模式，之后就可以在任何地方直接 `import money3`，**不需要手动设置 PYTHONPATH**。
-
 ### 5. 配置 API Keys
 
 创建 `.env` 文件：
@@ -56,10 +54,6 @@ FRED_API_KEY=your_fred_api_key
 ### 方式 1: Web 界面（推荐）
 
 ```bash
-# 使用启动脚本
-./run_webapp.sh
-
-# 或直接运行
 python3 api_server.py
 ```
 
@@ -70,17 +64,13 @@ python3 api_server.py
 ```bash
 # 运行主程序（完整流程）
 python3 main.py
-
-# 运行测试脚本
-python3 bl_test_main.py              # 测试 Black-Litterman 优化
-python3 money3/backtest/bt_test_main.py  # 测试回测功能
 ```
 
 ## 项目结构
 
 ```
 money3/
-├── money3/                # 核心功能包（原 src/）
+├── money3/                # 核心功能包
 │   ├── __init__.py
 │   ├── data/             # 数据获取模块
 │   ├── llm/              # LLM 集成模块
@@ -90,33 +80,10 @@ money3/
 │   └── index.html        # Web 前端页面
 ├── api_server.py         # Flask API 服务器
 ├── main.py               # 命令行主程序
-├── bl_test_main.py       # Black-Litterman 测试
 ├── pyproject.toml        # 项目配置（标准）
 ├── requirements.txt      # 依赖列表
-├── run_webapp.sh         # Web 应用启动脚本
-└── .env                  # API Keys 配置（需自行创建）
+└── .env                  # API Keys 配置
 ```
-
-## 技术架构
-
-- **包管理**: 标准 Python 包结构 + `pyproject.toml`
-- **后端**: Flask + Python
-- **前端**: 纯 HTML + JavaScript + ECharts
-- **数据**: Tiingo (价格), Finnhub (新闻), FRED (宏观)
-- **AI**: OpenAI GPT-4
-- **优化**: Black-Litterman 模型
-- **回测**: 自研回测引擎
-
-## 为什么不需要设置 PYTHONPATH？
-
-使用 `pip install -e .` 将项目安装为**可编辑模式**后：
-
-1. ✅ Python 能自动找到 `money3` 包
-2. ✅ 所有 `from money3.xxx import ...` 都能正常工作
-3. ✅ 不需要手动修改 `sys.path`
-4. ✅ 符合 Python 项目的标准实践
-
-这是现代 Python 项目的**推荐做法**。
 
 ## API 接口
 
@@ -153,34 +120,9 @@ money3/
 }
 ```
 
-### GET /api/health
-
-健康检查接口
-
-### GET /api/test
-
-使用示例数据测试（不调用外部 API）
-
-## 开发说明
-
-### 添加新的依赖
-
-```bash
-# 修改 pyproject.toml 中的 dependencies
-# 然后重新安装
-pip install -e .
-```
-
-### 运行测试
-
-```bash
-python3 bl_test_main.py
-python3 money3/backtest/bt_test_main.py
-```
 
 ### 代码结构说明
 
-- **入口文件**: `main.py`, `api_server.py`, `bl_test_main.py` 等位于项目根目录
+- **入口文件**: `main.py`, `api_server.py` 等位于项目根目录
 - **核心包**: `money3/` 包含所有可复用的功能模块
 - **导入方式**: 统一使用 `from money3.xxx import ...` 绝对导入
-- **无需路径hack**: 不需要在代码中添加 `sys.path.insert()` 等路径设置

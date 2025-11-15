@@ -58,16 +58,16 @@ class LLMClient:
 
             # 收集思考内容
             if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
-                if not is_answering:
-                    print(delta.reasoning_content, end="", flush=True)
+                # if not is_answering:
+                #     print(delta.reasoning_content, end="", flush=True)
                 reasoning_content += delta.reasoning_content
 
             # 收集回复内容
             if hasattr(delta, "content") and delta.content:
                 if not is_answering:
-                    print("\n", end="", flush=True)
+                    # print("\n", end="", flush=True)
                     is_answering = True
-                print(delta.content, end="", flush=True)
+                # print(delta.content, end="", flush=True)
                 answer_content += delta.content
 
         print("\n" + "~" * 40 + "\n")  # 波浪线换行隔开
