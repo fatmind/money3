@@ -3,14 +3,14 @@ from typing import List, Optional
 
 import pandas as pd
 
-from src.data.data_providers import (
+from money3.data.data_providers import (
     fetch_prices_from_tiingo,
     fetch_news_from_finnhub,
     fetch_macro_from_fred,
 )
-from src.llm.model import LLMClient
-from src.opt.black_litterman import BLResult, optimize_with_black_litterman
-from src.backtest.backtester import (
+from money3.llm.model import LLMClient
+from money3.opt.black_litterman import BLResult, optimize_with_black_litterman
+from money3.backtest.backtester import (
     Backtester,
     BacktestReport,
     render_drawdown,

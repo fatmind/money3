@@ -1,7 +1,8 @@
 """单测：使用提供的价格数据和权重测试 backtester.run() 函数"""
 
 import pandas as pd
-from src.backtest.backtester import Backtester, BacktestReport
+
+from money3.backtest.backtester import Backtester, BacktestReport
 
 
 def build_prices_from_table() -> pd.DataFrame:

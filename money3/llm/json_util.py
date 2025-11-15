@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-兼容非法 JSON 字符串的解析器
+智能 JSON 解析器
+
+自动处理 LLM 返回的非标准 JSON 格式：
+- 先尝试标准解析（快速）
+- 失败时自动修复常见错误后重试
 """
 
 import json
@@ -152,24 +156,30 @@ def fix_malformed_json(json_str: str) -> str:
     return result
 
 
-def parse_malformed_json(json_str: str) -> dict:
+def parse_json(json_str: str) -> dict:
     """
-    尝试解析非法的 JSON 字符串
+    解析 JSON 字符串，自动处理格式错误
+    
+    1. 先尝试直接解析（正常情况）
+    2. 如果失败，尝试修复后再解析
     """
-    # 第一次尝试：直接解析
+    # 第一次尝试：直接解析（最快，适用于正常 JSON）
     try:
         return json.loads(json_str)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        print(f"⚠️  JSON 解析失败，尝试修复... (错误: {e})")
     
     # 第二次尝试：修复后解析
     try:
         fixed_json = fix_malformed_json(json_str)
-        return json.loads(fixed_json)
+        result = json.loads(fixed_json)
+        print("✅ JSON 修复成功")
+        return result
     except json.JSONDecodeError as e:
+        print(f"❌ JSON 修复失败")
         print(f"修复后的 JSON：\n{fixed_json}\n")
         print(f"解析错误：{e}")
-        raise
+        raise ValueError(f"无法解析 JSON 字符串: {e}") from e
 
 
 def main():
@@ -204,8 +214,8 @@ def main():
     print("\n" + "="*50 + "\n")
     
     try:
-        result = parse_malformed_json(malformed_json)
-        print("解析成功！✓")
+        result = parse_json(malformed_json)
+        print("\n✅ 解析成功！")
         print("\n解析结果：")
         print(json.dumps(result, indent=2, ensure_ascii=False))
         

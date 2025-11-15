@@ -9,3 +9,5 @@ python-dotenv>=1.0.0
 openai>=1.51.0
 # yfinance>=0.2.32 # VIX can be fetched from FRED
 finnhub-python>=2.4.20
+flask>=3.0.0
+flask-cors>=4.0.0

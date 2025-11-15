@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 from pypfopt import black_litterman, risk_models, EfficientFrontier
-from src.llm import LLMClient
-from src.data.TingoData import TingoData
+from money3.llm import LLMClient
+from money3.data.TingoData import TingoData
 
 
 class Optimizer:

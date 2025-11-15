@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 
 from openai import OpenAI
 
+from money3.llm.json_util import parse_json
+
 
 class LLMClient:
     """LLM 客户端（阿里云 DeepSeek API）。
@@ -79,6 +81,8 @@ class LLMClient:
         1. ```json\n{...}\n``` 代码块
         2. 混合文本 + JSON
         3. 纯 JSON
+        
+        使用智能解析器，自动处理格式错误。
         """
         content = content.strip()
 
@@ -89,7 +93,7 @@ class LLMClient:
             if end > start:
                 json_str = content[start:end].strip()
                 try:
-                    return json.loads(json_str)
+                    return parse_json(json_str)
                 except Exception:
                     pass
 
@@ -100,13 +104,13 @@ class LLMClient:
         if first_brace >= 0 and last_brace > first_brace:
             json_str = content[first_brace : last_brace + 1]
             try:
-                return json.loads(json_str)
+                return parse_json(json_str)
             except Exception:
                 pass
 
         # 都失败，直接尝试解析整个 content
         try:
-            return json.loads(content)
+            return parse_json(content)
         except Exception:
             raise Exception(f"Failed to parse JSON from content: {content[:100]}")
 

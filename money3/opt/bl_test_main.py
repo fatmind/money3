@@ -1,8 +1,8 @@
 from typing import Dict, List
+
 import pandas as pd
 
-# from src.opt.black_litterman import BLResult, optimize_with_black_litterman
-from src.opt.black_litterman import BLResult, optimize_with_black_litterman
+from money3.opt.black_litterman import BLResult, optimize_with_black_litterman
 
 
 # 兼容两种运行方式：
